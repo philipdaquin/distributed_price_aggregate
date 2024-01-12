@@ -1,4 +1,6 @@
-use clap::{Parser, Subcommand};
+use std::process::exit;
+
+use clap::{Parser, Subcommand, ValueEnum};
 /*
     simple --mode=cache --times=10
     simple --mode=read
@@ -6,6 +8,7 @@ use clap::{Parser, Subcommand};
 #[derive(Debug, Parser)]
 #[command(
     bin_name = "simple",
+    name = "simple",
     long_about = "Simple Client for Retrieving Average BTC Prices",
     subcommand_value_name = "mode"
 )]
@@ -19,20 +22,22 @@ pub enum Action {
     #[command(long_about = "Read Cache File")]
     READ,
     #[command(long_about = "Retrieve the average price of BTC/USD with given number of seconds")]
-    Cache {
+    CACHE {
         #[arg(long)]
         times: i32
     },
 }
-
 fn main() {
     let cli = Args::parse();
     match cli.mode { 
-        Action::Cache { times } => { 
-            println!("Monitoring BTC under {times} seconds");
+        Action::CACHE { times } => { 
+            println!("Monitoring BTC under {times} seconds ");
+            exit(1);
         },
         Action::READ => { 
-            println!("Reading BTC price")
+            println!("Reading BTC price");
+            exit(1);
+
         }
     }
 }

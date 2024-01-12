@@ -1,6 +1,7 @@
 use std::process::exit;
 
 use clap::{Parser, Subcommand, ValueEnum};
+use simple_client::models::{cache_details::CacheDetails, enums::ticker_symbol::TickerSymbols};
 /*
     simple --mode=cache --times=10
     simple --mode=read
@@ -30,13 +31,15 @@ pub enum Action {
 fn main() {
     let cli = Args::parse();
     match cli.mode { 
-        Action::CACHE { times } => { 
+        Action::CACHE { times } => {
+
+            let cache_details = CacheDetails::new(TickerSymbols::BTCUSDT, times);
+
             println!("Monitoring BTC under {times} seconds ");
-            exit(1);
+            println!("{cache_details:#?}");
         },
         Action::READ => { 
             println!("Reading BTC price");
-            exit(1);
 
         }
     }

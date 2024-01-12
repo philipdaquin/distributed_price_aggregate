@@ -1,4 +1,5 @@
 
-mod error;
-mod models;
-mod client;
+pub mod error;
+mod service;
+pub mod models;
+mod ws_client;

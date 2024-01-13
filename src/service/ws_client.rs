@@ -12,7 +12,6 @@ use tokio::net::TcpStream;
 use tokio::sync::mpsc::{self, UnboundedSender};
 use crate::{models::{enums::ticker_symbol::TickerSymbols, price_ticker::PriceTicker, agg_trade_data::{TradeEvent, BinanceAPIResultWrapper}}};
 use futures_util::StreamExt;
-use tokio::time::{timeout, Duration};
 
 #[derive(Debug)]
 pub struct BinanceWSClient;
@@ -45,6 +44,7 @@ impl BinanceWSClient {
                     let agg_price_data = trade_event.get_agg_data().unwrap_or_default();
                     let price_ticker_data = PriceTicker::from(agg_price_data);
                     
+                    // log::info!("{:#?}", price_ticker_data.clone());
                     // Send to Consumer 
                     let _ = tx.send(price_ticker_data);
                 },
@@ -66,17 +66,21 @@ impl BinanceWSClient {
         let symbol = symbol.as_ref().expect("Ticker Symbol is Missing");
         
         log::info!("Reading Incoming Market Data For {} ", symbol);
-        let (tx, mut rx) = mpsc::unbounded_channel::<PriceTicker>();
-        // Start the timeout 
-        let task = timeout(cache_details.time_to_record, Self::read_incoming_price_feed(tx)).await;
+        let (tx, rx) = mpsc::unbounded_channel::<PriceTicker>();
+        
+        // Start the timeout - Consume the price feeds set to expire in `time_to_record` seconds
+        let task = tokio::time::timeout(*time_to_record, Self::read_incoming_price_feed(tx))
+            .await
+            .map_err(|e| eprintln!("{}", e.to_string().to_uppercase()));
 
         // somehow this made the timeout work
-        while let Ok(ticker) = task { 
+        while let Ok(ref ticker) = task { 
             match ticker {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
+                Ok(_) => println!("Task Completed Successfully under {time_to_record:?}"),
+                Err(_) => eprintln!("Failed to execute task"),
             }
         }
+        
         // Process Items inside the Consumer 
         let mut agg_price_ticker = AggTickerPriceService::new(symbol.to_owned(), rx);
         let agg_prices = agg_price_ticker.get_agg_ticker_price().await; 

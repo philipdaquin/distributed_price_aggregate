@@ -3,10 +3,19 @@ use tokio::time::Duration;
 use super::enums::ticker_symbol::TickerSymbols;
 
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CacheDetails { 
     pub symbol: Option<TickerSymbols>,
     pub time_to_record: Duration
+}
+
+impl Default for CacheDetails { 
+    fn default() -> Self {
+        return Self { 
+            symbol: Some(TickerSymbols::BTCUSDT),
+            time_to_record: Duration::from_secs(10)
+        }
+    }
 }
 
 impl CacheDetails { 

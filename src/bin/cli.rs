@@ -23,9 +23,9 @@ struct Args {
 pub enum Action {
     #[command(long_about = "Read Cache File")]
     READ,
-    #[command(long_about = "Retrieve the average price of BTC/USD with given number of seconds")]
+    #[command(long_about = "Retrieve the average price of BTC/USD within given number of seconds")]
     CACHE {
-        #[arg(long)]
+        #[arg(long, short, default_value_t = 10)]
         times: u64
     },
 }

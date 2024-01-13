@@ -3,6 +3,7 @@ use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, ServerError>;
 use serde_json::error::Error as SerdeError;
+use tokio::time::error::Elapsed;
 use tungstenite::Error as WebSocketError;
 use std::{io, num::ParseFloatError};
 use binance_spot_connector_rust::{hyper::Error as HyperError};
@@ -36,7 +37,10 @@ pub enum ServerError {
     ClientWaitingTooLong(#[source] io::Error),
 
     #[error("Unexpected command type")]
-    UnexpectedCommandType
+    UnexpectedCommandType,
+
+    #[error("Timeout Elapsed: {0:#?}")]
+    TimeOutElapsed(#[source] Elapsed)
 }
 
 impl From<SerdeError> for ServerError { 
@@ -66,5 +70,11 @@ impl From<WebSocketError> for ServerError {
     fn from(value: WebSocketError) -> Self {
         ServerError::WebSocketConnectionError(value)
 
+    }
+}
+
+impl From<Elapsed> for ServerError {
+    fn from(value: Elapsed) -> Self {
+        ServerError::TimeOutElapsed(value)
     }
 }

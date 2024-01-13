@@ -1,5 +1,5 @@
 
 pub mod error;
-mod service;
+pub mod service;
 pub mod models;
-mod ws_client;
+pub mod repository;

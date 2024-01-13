@@ -20,7 +20,7 @@ pub struct BinanceWSClient;
 impl BinanceWSClient { 
     // Read real time price updates from Binance Websocket API
     pub async fn read_incoming_price_feed(tx: UnboundedSender<PriceTicker>) -> Result<()> { 
-        
+        log::info!("Connecting Client to Binance WebSocket API");
         // 1. Connect to Binance WebSocket Service 
         let (mut conn,  _) = BinanceWebSocketClient::connect_async_default()
             .await
@@ -29,7 +29,8 @@ impl BinanceWSClient {
         // 2. Listen to real time updates using AggTradeStreams
         let agg_stream = AggTradeStream::new(&TickerSymbols::BTCUSDT.to_string());
         
-        // Subscribe to Streams 
+        // Subscribe to Streams
+        log::info!("Listening to Aggregate Trade Streams...");
         conn.subscribe(vec![&agg_stream.into()]).await;
         
         // Consuming messages
@@ -49,7 +50,7 @@ impl BinanceWSClient {
                 Err(_) => break
             }
         }
-
+        
         conn.close().await.expect("Unable to disconnect");
 
         return Ok(())
@@ -57,12 +58,12 @@ impl BinanceWSClient {
     }
 
     // Consume real-time price updates using WebSocket Streams
-    pub async fn consume_market_data(cache_details: &CacheDetails) -> Result<()> { 
+    pub async fn consume_market_data(cache_details: &CacheDetails) -> Result<AggTickerPrices> { 
 
         let CacheDetails {symbol, time_to_record} = &cache_details;
         let symbol = symbol.as_ref().expect("Ticker Symbol is Missing");
+        
         log::info!("Reading Incoming Market Data For {} ", symbol);
-
         let (tx, mut rx) = mpsc::unbounded_channel::<PriceTicker>();
         // Start the timeout 
         let task = timeout(cache_details.time_to_record, Self::read_incoming_price_feed(tx)).await;
@@ -78,9 +79,7 @@ impl BinanceWSClient {
         let mut agg_price_ticker = AggTickerPriceService::new(symbol.to_owned(), rx);
         let agg_prices = agg_price_ticker.get_agg_ticker_price().await; 
         
-        println!("Cache complete. The average USD price of BTC is {}", agg_prices.avg_price.expect("Unable to calculate AVG price"));
-
-        Ok(())
+        Ok(agg_prices)
 
     }
 

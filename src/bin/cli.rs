@@ -2,7 +2,7 @@ use std::process::exit;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use env_logger::Builder;
-use simple_client::{error::Result, models::{cache_details::CacheDetails, enums::ticker_symbol::TickerSymbols}, service::ws_client::BinanceWSClient};
+use simple_client::{error::Result, models::{cache_details::CacheDetails, enums::ticker_symbol::TickerSymbols}, service::ws_client::BinanceWSClient, repository::file_repository::FileRepository};
 /*
     simple --mode=cache --times=10
     simple --mode=read
@@ -36,20 +36,25 @@ async fn main() -> Result<()> {
     Builder::from_default_env()
         .filter(None, log::LevelFilter::Debug)
         .init();
+
     match cli.mode { 
         Action::CACHE { times } => {
 
             let cache_details = CacheDetails::new(TickerSymbols::BTCUSDT, times);
 
             // Send to worker
-            let _ = BinanceWSClient::consume_market_data(&cache_details).await?;
-            
+            let market_data = BinanceWSClient::consume_market_data(&cache_details).await?;
+            println!("Cache complete. The average USD price of BTC is {}", market_data.avg_price.expect("Unable to calculate AVG price"));
 
-            println!("Monitoring BTC under {times} seconds ");
+            // Save to file 
+            let _ = FileRepository::save(&market_data)?;
         },
         Action::READ => { 
-            println!("Reading BTC price");
 
+            match FileRepository::load_from_file() {
+                Ok(file) => println!("Reading Cache Value: {file:?}"),
+                Err(e) => eprintln!("Error Loading from file: {e:?}"),
+            }
         }
     }
     Ok(())

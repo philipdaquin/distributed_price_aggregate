@@ -1,8 +1,8 @@
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 use super::enums::ticker_symbol::TickerSymbols;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct PriceTicker { 
     pub symbol: Option<TickerSymbols>,
     pub avg_price: f64

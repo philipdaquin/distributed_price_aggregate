@@ -11,7 +11,7 @@ pub enum ServerError {
     #[error("Input / Output operation fails: {0:#?}")]
     IoError(#[source] io::Error), 
 
-    #[error("Input / Output operation fails: {0:#?}")]
+    #[error("Missing Cache File: {0:#?}")]
     MissingCacheFile(#[source] io::Error),
 
     #[error("Input / Output operation fails: {0:#?}")]

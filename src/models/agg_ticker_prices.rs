@@ -1,6 +1,8 @@
+use serde_derive::{Serialize, Deserialize};
+
 use super::{price_ticker::PriceTicker, enums::ticker_symbol::TickerSymbols};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AggTickerPrices { 
     pub symbol: TickerSymbols,
     pub raw_data_points: Vec<PriceTicker>,

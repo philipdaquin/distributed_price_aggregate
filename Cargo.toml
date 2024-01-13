@@ -42,7 +42,8 @@ tracing-bunyan-formatter = "0.3.2"
 serde_with = "3.4.0"
 serde-this-or-that = "0.4.2"
 tokio-stream = "0.1.14"
-tokio-tungstenite = {version = "0.17.1", features = ["native-tls"], optional = true}
+tokio-tungstenite = {version = "0.21.0", features = ["native-tls"], optional = true}
+tungstenite = "0.21.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.13"

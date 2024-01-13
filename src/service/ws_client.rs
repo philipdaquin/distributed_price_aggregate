@@ -19,6 +19,7 @@ pub struct BinanceWSClient;
 
 impl BinanceWSClient { 
     // Read real time price updates from Binance Websocket API
+    #[tracing::instrument(level = "debug")]
     pub async fn read_incoming_price_feed(tx: UnboundedSender<PriceTicker>) -> Result<()> { 
         log::info!("Connecting Client to Binance WebSocket API");
         // 1. Connect to Binance WebSocket Service 
@@ -58,6 +59,7 @@ impl BinanceWSClient {
     }
 
     // Consume real-time price updates using WebSocket Streams
+    #[tracing::instrument(level = "debug")]
     pub async fn consume_market_data(cache_details: &CacheDetails) -> Result<AggTickerPrices> { 
 
         let CacheDetails {symbol, time_to_record} = &cache_details;

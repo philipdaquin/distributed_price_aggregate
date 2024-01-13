@@ -33,9 +33,11 @@ pub enum Action {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Args::parse();
-    Builder::from_default_env()
-        .filter(None, log::LevelFilter::Debug)
-        .init();
+    // Builder::from_default_env()
+    //     .filter(None, log::LevelFilter::Debug)
+    //     .init();
+
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     match cli.mode { 
         Action::CACHE { times } => {

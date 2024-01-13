@@ -3,6 +3,7 @@ use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, ServerError>;
 use serde_json::error::Error as SerdeError;
+use tungstenite::Error as WebSocketError;
 use std::{io, num::ParseFloatError};
 use binance_spot_connector_rust::{hyper::Error as HyperError};
 
@@ -20,6 +21,8 @@ pub enum ServerError {
     #[error("Input / Output operation fails: {0:#?}")]
     SerdeDeserialisationError(#[source] SerdeError),
 
+    #[error("Input / Output operation fails: {0:#?}")]
+    WebSocketConnectionError(#[source] WebSocketError),
     
     #[error("Input / Output operation fails: {0:#?}")]
     FailedToParseInt(#[source] ParseFloatError),
@@ -56,6 +59,12 @@ impl From<HyperError> for ServerError {
 impl From<ParseFloatError> for ServerError {
     fn from(value: ParseFloatError) -> Self {
         ServerError::FailedToParseInt(value)
+
+    }
+}
+impl From<WebSocketError> for ServerError {
+    fn from(value: WebSocketError) -> Self {
+        ServerError::WebSocketConnectionError(value)
 
     }
 }

@@ -15,7 +15,7 @@ impl AggTickerPriceService {
             symbol, receiver
         }
     } 
-    
+    #[tracing::instrument(level = "debug")]
     pub async fn get_agg_ticker_price(&mut self) -> AggTickerPrices { 
         let symbol = self.symbol.clone();
         let mut queue = Vec::new();

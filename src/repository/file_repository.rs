@@ -31,6 +31,7 @@ impl FileRepository {
     //     todo!()
     // }
 
+    #[tracing::instrument(level = "debug")]
     pub fn load_from_file() -> Result<AggTickerPrices> {
         let file = File::open(DEFAULT_FILE_NAME)
             .map(|f| f)
@@ -40,7 +41,7 @@ impl FileRepository {
 
         Ok(agg_data)
     }
-
+    #[tracing::instrument(level = "debug")]
     pub fn save(agg_price_data: &AggTickerPrices) -> Result<()> {
         
         let file = File::create(DEFAULT_FILE_NAME)?;

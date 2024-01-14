@@ -1,8 +1,7 @@
+# Distributed Price Aggregator Service
 
+## Simple Client
 
+## Simulated Distributed Client 
 
-```
-
-    cargo run -- cache --times=10 
-
-```
+## Using signatures 

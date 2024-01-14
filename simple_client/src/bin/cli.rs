@@ -14,7 +14,7 @@ use simple_client::{error::Result, models::{cache_details::CacheDetails, enums::
     long_about = "Simple Client for Retrieving Average BTC Prices",
     subcommand_value_name = "mode"
 )]
-struct Args {
+struct CliArgs {
     #[command(subcommand, name = "mode")]
     mode: Action,
 }
@@ -25,14 +25,14 @@ pub enum Action {
     READ,
     #[command(long_about = "Retrieve the average price of BTC/USD within given number of seconds")]
     CACHE {
-        #[arg(long, short, default_value_t = 10)]
+        #[arg(long, short)]
         times: u64
     },
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cli = Args::parse();
+    let cli = CliArgs::parse();
     // Builder::from_default_env()
     //     .filter(None, log::LevelFilter::Debug)
     //     .init();

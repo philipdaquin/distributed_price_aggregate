@@ -1,9 +1,10 @@
+use serde_derive::{Deserialize, Serialize};
 use tokio::time::Duration;
 
 use super::enums::ticker_symbol::TickerSymbols;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CacheDetails { 
     pub symbol: Option<TickerSymbols>,
     pub time_to_record: Duration

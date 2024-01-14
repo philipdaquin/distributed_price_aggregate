@@ -9,6 +9,7 @@ pub struct AggTickerPrices {
     pub avg_price: Option<f64>
 }
 
+
 impl AggTickerPrices { 
     pub fn new(
         symbol: TickerSymbols, 

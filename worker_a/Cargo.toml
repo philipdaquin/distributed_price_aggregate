@@ -46,6 +46,8 @@ serde-this-or-that = "0.4.2"
 tokio-stream = "0.1.14"
 tokio-tungstenite = {version = "0.21.0", features = ["native-tls"], optional = true}
 tungstenite = "0.21.0"
+parking_lot = "0.12.1"
+futures = "0.3.30"
 
 [dev-dependencies]
 assert_cmd = "2.0.13"

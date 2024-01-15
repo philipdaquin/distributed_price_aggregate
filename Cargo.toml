@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "worker_a",
-    "simple_client"
+    "simple_client",
+    "master_node"
 ]

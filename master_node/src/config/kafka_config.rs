@@ -13,11 +13,10 @@ use once_cell::sync::OnceCell;
 use serde::de::DeserializeOwned;
 
 use crate::error::Result;
-use crate::models::cache_details::CacheDetails;
 use crate::service::worker_service::WorkerService;
 
 use super::message_topics::MessageTopic;
-use super::models::MessageType;
+use super::models::KafkaMessage;
 use super::models::agg_price_message::AggPriceMessage;
 use super::models::task_queue_message::TaskQueueMessage;
 
@@ -89,14 +88,16 @@ impl KafkaClientConfig {
         return self.clone();
     } 
 
-    pub async fn send_message(&self, message: &Arc<TaskQueueMessage>) -> Result<()> { 
+    pub async fn send_message(&self, message: &Arc<AggPriceMessage>, topic: &Arc<MessageTopic>) -> Result<()> { 
         if let Some(ref producer) = &self.producer_config { 
 
             let futures: Vec<_> = (0..5).map(|_| async move {
-                let binding = message.clone();
-                let topic  = &binding.as_ref().message_topic.to_string();
+                let binding = topic.clone();
+                let topic  = &binding.as_ref().to_string();
                 
-                let payload = &serde_json::to_string(binding.as_ref()).unwrap();
+                let message_arc = message.clone();
+                let payload = &serde_json::to_string(message_arc.as_ref()).unwrap();
+
                 let record = FutureRecord::to(&topic)
                     .payload(payload)
                     .key(&topic);

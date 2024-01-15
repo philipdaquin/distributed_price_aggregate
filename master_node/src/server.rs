@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{get, middleware::Logger, route, web, App, HttpServer, Responder};
 
-use crate::{config::{kafka_config::KafkaClientConfig, message_topics::MessageTopic}, error::ServerError, models::cache_details::CacheDetails};
+use crate::{config::{kafka_config::KafkaClientConfig, message_topics::MessageTopic, models::agg_price_message::AggPriceMessage}, error::ServerError};
 
 
 
@@ -29,7 +29,7 @@ impl WorkerServer {
 
         // Initialise Kafka Consumer and Producers
         let kafka_manager = KafkaClientConfig::new()
-            .initialise_consumer(MessageTopic::JobTaskQueue)
+            .initialise_consumer(MessageTopic::AggPriceQueue)
             .initialise_producer()
             .build();
 

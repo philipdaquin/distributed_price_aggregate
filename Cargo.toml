@@ -2,5 +2,5 @@
 members = [
     "worker_a",
     "simple_client",
-    "master_node"
+    "master_n"
 ]

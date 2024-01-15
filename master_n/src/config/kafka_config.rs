@@ -1,23 +1,18 @@
 use std::sync::{Mutex, Arc};
 use std::time::Duration;
-use futures::Future;
 use lazy_static::lazy_static;
 use rdkafka::config::RDKafkaLogLevel;
 use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::error::KafkaError;
 use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord, DeliveryFuture};
-use rdkafka::util::Timeout;
 use rdkafka::{ClientConfig, ClientContext, Message};
 use once_cell::sync::OnceCell;
-use serde::de::DeserializeOwned;
 
 use crate::error::Result;
+use crate::models::agg_ticker_prices::AggTickerPrices;
 use crate::service::worker_service::WorkerService;
 
 use super::message_topics::MessageTopic;
-use super::models::KafkaMessage;
-use super::models::agg_price_message::AggPriceMessage;
 use super::models::task_queue_message::TaskQueueMessage;
 
 lazy_static! {
@@ -28,7 +23,7 @@ lazy_static! {
 pub static KAFKA_CLIENT_CONTEXT: OnceCell<KafkaClientConfig> = OnceCell::new();
 
 #[inline]
-pub(crate) fn kafka_client_config() -> &'static KafkaClientConfig { 
+pub fn kafka_client_config() -> &'static KafkaClientConfig { 
     KAFKA_CLIENT_CONTEXT.get().expect("Missing Session for Kafka")
 }
 
@@ -88,16 +83,14 @@ impl KafkaClientConfig {
         return self.clone();
     } 
 
-    pub async fn send_message(&self, message: &Arc<AggPriceMessage>, topic: &Arc<MessageTopic>) -> Result<()> { 
+    pub async fn send_message(&self, message: &Arc<TaskQueueMessage>) -> Result<()> { 
         if let Some(ref producer) = &self.producer_config { 
 
             let futures: Vec<_> = (0..5).map(|_| async move {
-                let binding = topic.clone();
-                let topic  = &binding.as_ref().to_string();
+                let binding = message.clone();
+                let topic  = &binding.as_ref().message_topic.to_string();
                 
-                let message_arc = message.clone();
-                let payload = &serde_json::to_string(message_arc.as_ref()).unwrap();
-
+                let payload = &serde_json::to_string(binding.as_ref()).unwrap();
                 let record = FutureRecord::to(&topic)
                     .payload(payload)
                     .key(&topic);
@@ -115,7 +108,8 @@ impl KafkaClientConfig {
         Ok(())
     }
 
-    pub async fn consume_messages(&self) -> Result<()> { 
+    pub async fn consume_messages(&self) -> Result<Option<AggTickerPrices>> { 
+        let mut prices: Option<AggTickerPrices> = None;
         if let Some(ref consumer) = &self.consumer_config { 
             let stream = consumer.recv().await;
 
@@ -124,11 +118,12 @@ impl KafkaClientConfig {
                 let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
 
                 log::info!("Send over to be process by workers");
-                let _ = WorkerService::process_worker_task(task_details).await?;
+                let agg_prices = WorkerService::process_worker_task(task_details).await?;
+                let _ = prices.insert(agg_prices);
             }
         }
 
-        Ok(())
+        Ok(prices)
     }
     
 }

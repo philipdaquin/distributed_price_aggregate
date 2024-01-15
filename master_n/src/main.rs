@@ -1,4 +1,4 @@
-use master_node::{error::Result, server::WorkerServer};
+use master_n::{error::Result, server::WorkerServer};
 use dotenv::dotenv;
 
 #[actix_web::main]

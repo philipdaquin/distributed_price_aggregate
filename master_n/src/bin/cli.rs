@@ -1,8 +1,11 @@
-use std::process::exit;
+use std::sync::Arc;
 
-use clap::{Parser, Subcommand, ValueEnum};
-use env_logger::Builder;
-use master_node::{error::Result, models::{cache_details::CacheDetails, enums::ticker_symbol::TickerSymbols}, service::ws_client::BinanceWSClient, repository::file_repository::FileRepository};
+use clap::{Parser, Subcommand};
+use master_n::{error::Result, models::{cache_details::CacheDetails, enums::ticker_symbol::TickerSymbols}, 
+    config::{
+        models::{task_queue_message::TaskQueueMessage, MessageType}, 
+        message_topics::MessageTopic, kafka_config::kafka_client_config
+    }, repository::file_repository::FileRepository};
 /*
     simple --mode=cache --times=10
     simple --mode=read
@@ -41,18 +44,16 @@ async fn main() -> Result<()> {
 
     match cli.mode { 
         Action::CACHE { times } => {
-
-            // Create a new job task for all subscribed worker node 
+            // Create a task 
+            let cache_details = CacheDetails::new(TickerSymbols::BTCUSDT, times);
             
-
-            // let cache_details = CacheDetails::new(TickerSymbols::BTCUSDT, times);
-            
+            // Send a new job to all workers
+            let message_topic = MessageTopic::JobTaskQueue;
+            let message_type = MessageType::CacheDetails(cache_details);
+            let payload = TaskQueueMessage::new(message_topic, message_type);
 
             // Send to worker
-            // let market_data = BinanceWSClient::consume_market_data(&cache_details).await?;
-            // println!("Cache complete. The average USD price of BTC is {}", market_data.avg_price.expect("Unable to calculate AVG price"));
-            // Save to file 
-            // let _ = FileRepository::save(&market_data)?;
+            let _ = kafka_client_config().send_message(&Arc::new(payload)).await?;
         },
         Action::READ => { 
 

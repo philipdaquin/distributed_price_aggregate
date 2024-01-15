@@ -51,7 +51,7 @@ impl KafkaClientConfig {
 
     pub fn initialise_consumer(&mut self, consumer_topic: MessageTopic) -> &mut Self { 
         let consumer_config: StreamConsumer = ClientConfig::new()
-            .set("group.id", "consumer-group")
+            .set("group.id", "consumer-group-4")
             .set("bootstrap.servers", KAFKA_BROKER.as_str())
             .set("session.timeout.ms", "6000")
             .set("enable.partition.eof", "true")

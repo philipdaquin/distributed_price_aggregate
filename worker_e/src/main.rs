@@ -1,4 +1,4 @@
-use worker_a::{error::Result, server::WorkerServer};
+use worker_e::{error::Result, server::WorkerServer};
 use dotenv::dotenv;
 
 #[actix_web::main]

@@ -12,6 +12,7 @@ use crate::models::agg_ticker_prices::AggTickerPrices;
 use crate::models::cache_details::CacheDetails;
 use crate::models::price_ticker::PriceTicker;
 use crate::repository::file_repository::FileRepository;
+use crate::service::validate_service::initialise_valid_signatures;
 
 use super::agg_market_data_price::AggMarketDataPriceService;
 
@@ -31,37 +32,42 @@ impl WorkerService {
         let payload = TaskQueueMessage::new(message_topic, message_type);
 
         // Send to worker
+        log::info!("Sending new job to workers");
         let _ = kafka_client_config().send_message(&Arc::new(payload)).await?;
 
         Ok(())
     }
     #[tracing::instrument(level = "debug", err)]
-    pub async fn process_worker_task(task: TaskQueueMessage) -> Result<AggTickerPrices> { 
+    pub async fn process_worker_task(task: TaskQueueMessage) -> Result<()> { 
+
+        let validator = initialise_valid_signatures();
+
         let (tx, rx) = mpsc::unbounded_channel::<AggTickerPrices>();
-
+        let mut tmp: Vec<AggTickerPrices> = Vec::new();
         log::info!("📘 Processing Data Prices");
-
         if let Some(job) = task.message_type { 
-            if let MessageType::AggPriceMessage(AggPriceMessage { agg_ticker_prices, .. }) = job { 
-
+            if let MessageType::AggPriceMessage(agg_message) = job { 
                 // Validate node signatures 
-                //
-                //
-
-                // Aggregate all AggTickerPrices into a single channel
-                if let Some(ticker_prices) = agg_ticker_prices { 
-                    let _ = tx.send(ticker_prices);
-                }
+                log::info!("🎉 Validating Node Signature");
+                if validator.validate_sig(agg_message.get_id(), agg_message.get_signature()) { 
+                    if let Some(data) = agg_message.agg_ticker_prices { 
+                        // let _ = tx.send(data);
+                        tmp.push(data)
+                    }
+                } 
             }
         }
 
         // Process all AggTickerPrices inside the Channel
-        let mut agg_price_ticker = AggMarketDataPriceService::new(rx);
-        let agg_prices = agg_price_ticker.get_agg_ticker_price().await; 
+        log::info!("Calculating final market data");
+        let mut agg_price_ticker = AggMarketDataPriceService::new(tmp);
+        let market_data = agg_price_ticker.get_agg_ticker_price().await; 
+        log::info!("Cache complete. The average USD price of BTC is {}", market_data.avg_price.expect("Unable to calculate AVG price"));
         
         // Save locally to database
-        log::info!("{agg_prices:?}");
+        log::info!("Saving locally");
+        let _ = FileRepository::save(&market_data)?;     
 
-        Ok(agg_prices)
+        Ok(())
     }
 }

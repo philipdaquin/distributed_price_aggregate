@@ -114,6 +114,7 @@ impl KafkaClientConfig {
     }
 
     pub async fn consume_messages(&self) -> Result<()> { 
+        
         if let Some(ref consumer) = &self.consumer_config { 
             loop { 
                 match consumer.recv().await {
@@ -127,15 +128,6 @@ impl KafkaClientConfig {
                     Err(_) => log::error!(""),
                 }
             }
-
-            // let mut stream = consumer.recv().await;
-            // while let Ok(payload) = &stream { 
-            //     let payload = MessagePayload::from(payload);
-            //     let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
-
-            //     log::info!("Send over to be process by workers");
-            //     let _ = WorkerService::process_worker_task(task_details).await?;
-            // }
         }
 
         Ok(())

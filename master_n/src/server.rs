@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use actix_cors::Cors;
 use actix_web::{get, middleware::Logger, route, web, App, HttpServer, Responder};
 use tokio::sync::oneshot;
@@ -31,29 +33,35 @@ impl WorkerServer {
             .initialise_producer()
             .build();
 
-        // Spawn kafka consumer
+        // Kafka Manager 
+        let kafka_manager = Arc::new(kafka_manager);
+        let binding = kafka_manager.clone();
 
-        // tokio::spawn(async move { 
-            let _ = kafka_manager.consume_messages().await; 
-            // if let Some(prices) = agg { 
-                // resp_tx.send(prices).expect("");
-            // }
-        // });
-        
-        // kafka_consumer.await?;
-        let da = web::Data::new(kafka_manager.clone());
 
-        HttpServer::new(move || {
-            App::new()
-                .app_data(da.clone())
-                .wrap(Cors::permissive())
-                .wrap(Logger::default())
-                .configure(configure_analysis_service)
-        })
-        .workers(2)
-        .bind(address)?
-        .run()
-        .await
+        tokio::select! { 
+            _ = async { 
+                    let _ = kafka_manager.clone().consume_messages().await; 
+            } => {}
+            _ = async {
+                let da = web::Data::new(binding.clone());
+                HttpServer::new(move || {
+                    App::new()
+                        .app_data(da.clone())
+                        .wrap(Cors::permissive())
+                        .wrap(Logger::default())
+                        .configure(configure_analysis_service)
+                })
+                .workers(2)
+                .bind(address)
+                .unwrap()
+                .run()
+                .await
+                .unwrap();
+            } => {}
+        }
+
+
+        Ok(())
     }
 }
 

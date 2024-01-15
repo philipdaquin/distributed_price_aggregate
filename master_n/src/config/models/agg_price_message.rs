@@ -23,4 +23,10 @@ impl AggPriceMessage {
             agg_ticker_prices: Some(agg_ticker_price)
         }
     }
+    pub fn get_id(&self) -> String { 
+        return self.node_id.to_string();
+    }
+    pub fn get_signature(&self) -> String { 
+        return self.node_signature.to_string();
+    }
 }

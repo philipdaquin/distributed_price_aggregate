@@ -31,7 +31,7 @@ impl WorkerService {
                 let message_type = MessageType::AggPriceMessage(agg_market_message);
                 let payload = TaskQueueMessage::new(MessageTopic::AggPriceQueue, message_type);
                 
-                log::info!("{payload:#?}");
+                log::info!("Sending Aggregate Market Data");
                 let _ = kafka_client_config().send_message(&Arc::new(payload)).await?;
             }
         }

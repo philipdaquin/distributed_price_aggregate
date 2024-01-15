@@ -7,3 +7,5 @@ pub mod config;
 // pub mod publisher;
 // pub mod consumer;
 pub mod server;
+pub mod controller;
+pub mod client;

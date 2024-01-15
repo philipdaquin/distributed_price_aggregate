@@ -82,6 +82,7 @@ impl BinanceWSClient {
         }
         
         // Process Items inside the Consumer 
+        log::info!("Aggregating data points");
         let mut agg_price_ticker = AggTickerPriceService::new(symbol.to_owned(), rx);
         let agg_prices = agg_price_ticker.get_agg_ticker_price().await; 
         

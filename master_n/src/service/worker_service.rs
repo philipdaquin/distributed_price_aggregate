@@ -22,10 +22,24 @@ impl WorkerService {
     /**
      *  Consume AggregatedPriceData from the worker nodes
      * 
-     */
+    */
+    #[tracing::instrument(level = "debug", err)]
+    pub async fn send_jobs(cache_details: CacheDetails) -> Result<()> { 
+        // Create a task 
+        let message_topic = MessageTopic::JobTaskQueue;
+        let message_type = MessageType::CacheDetails(cache_details);
+        let payload = TaskQueueMessage::new(message_topic, message_type);
+
+        // Send to worker
+        let _ = kafka_client_config().send_message(&Arc::new(payload)).await?;
+
+        Ok(())
+    }
     #[tracing::instrument(level = "debug", err)]
     pub async fn process_worker_task(task: TaskQueueMessage) -> Result<AggTickerPrices> { 
         let (tx, rx) = mpsc::unbounded_channel::<AggTickerPrices>();
+
+        log::info!("📘 Processing Data Prices");
 
         if let Some(job) = task.message_type { 
             if let MessageType::AggPriceMessage(AggPriceMessage { agg_ticker_prices, .. }) = job { 
@@ -45,7 +59,7 @@ impl WorkerService {
         let mut agg_price_ticker = AggMarketDataPriceService::new(rx);
         let agg_prices = agg_price_ticker.get_agg_ticker_price().await; 
         
-
+        // Save locally to database
         log::info!("{agg_prices:?}");
 
         Ok(agg_prices)

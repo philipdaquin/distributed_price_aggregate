@@ -32,22 +32,23 @@ impl WorkerServer {
             .initialise_consumer(MessageTopic::JobTaskQueue)
             .initialise_producer()
             .build();
-        
 
-        
-        // tokio::spawn(async move { 
-            let _ = kafka_manager.clone().consume_messages().await;        
+
+        // let consumer = tokio::spawn(async move { 
+            let _ = kafka_manager.consume_messages().await;        
         // });
 
-            // tokio::select! {
-                //     _ = consumer => {}
-                // }
-                let da = web::Data::new(kafka_manager.clone());
+        // tokio::select! {
+        //     _ = consumer => {
+        //         println!("Hello world!")
+        //     }
+        // }
+        
+        let da = web::Data::new(kafka_manager.clone());
 
         HttpServer::new(move || {
             App::new()
             .app_data(da.clone())
-
                 .wrap(Cors::permissive())
                 .wrap(Logger::default())
         })

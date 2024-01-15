@@ -53,8 +53,9 @@ impl KafkaClientConfig {
         let consumer_config: StreamConsumer = ClientConfig::new()
             .set("group.id", "consumer-group")
             .set("bootstrap.servers", KAFKA_BROKER.as_str())
-            .set("enable.partition.eof", "true")
             .set("session.timeout.ms", "6000")
+            .set("enable.partition.eof", "true")
+
             .set("enable.auto.commit", "true")
             .set("auto.offset.reset", "earliest")
             .set_log_level(RDKafkaLogLevel::Debug)
@@ -92,23 +93,17 @@ impl KafkaClientConfig {
     pub async fn send_message(&self, message: &Arc<TaskQueueMessage>) -> Result<()> { 
         if let Some(ref producer) = &self.producer_config { 
 
-            let futures: Vec<_> = (0..5).map(|_| async move {
-                let binding = message.clone();
-                let topic  = &binding.as_ref().message_topic.to_string();
-                
-                let payload = &serde_json::to_string(binding.as_ref()).unwrap();
-                let record = FutureRecord::to(&topic)
-                    .payload(payload)
-                    .key(&topic);
-    
-                log::info!("Sending payload to Aggregated Price Message Payload");
-                let _ = producer.send(record, Duration::from_secs(10)).await;
-                
-            }).collect();
+            let binding = message.clone();
+            let topic  = &binding.as_ref().message_topic.to_string();
+            
+            let payload = &serde_json::to_string(binding.as_ref()).unwrap();
+            let record = FutureRecord::to(&topic)
+                .payload(payload)
+                .key(&topic);
 
-            for fut in futures { 
-                log::info!("Future completed. Result")
-            }
+            log::info!("🚀 Sending payload to Aggregated Price Message Payload");
+            let _ = producer.send(record, Timeout::After(Duration::from_secs(0))).await;
+                
         }        
 
         Ok(())
@@ -116,14 +111,17 @@ impl KafkaClientConfig {
 
     pub async fn consume_messages(&self) -> Result<()> { 
         if let Some(ref consumer) = &self.consumer_config { 
-            let stream = consumer.recv().await;
+            loop { 
+                match consumer.recv().await {
+                    Ok(payload) => {
+                        let payload = MessagePayload::from(&payload);
+                        let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
 
-            while let Ok(payload) = &stream { 
-                let payload = MessagePayload::from(payload);
-                let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
-
-                log::info!("Send over to be process by workers");
-                let _ = WorkerService::process_worker_task(task_details).await?;
+                        log::info!("Send over to be process by workers");
+                        let _ = WorkerService::process_worker_task(task_details).await?;
+                    },
+                    Err(_) => log::error!(""),
+                }
             }
         }
 

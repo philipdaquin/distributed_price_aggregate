@@ -7,7 +7,8 @@ use rdkafka::message::BorrowedMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord, DeliveryFuture};
 use rdkafka::{ClientConfig, ClientContext, Message};
 use once_cell::sync::OnceCell;
-
+use futures_util::StreamExt;
+use futures::Future;
 use crate::error::Result;
 use crate::models::agg_ticker_prices::AggTickerPrices;
 use crate::service::worker_service::WorkerService;
@@ -16,7 +17,7 @@ use super::message_topics::MessageTopic;
 use super::models::task_queue_message::TaskQueueMessage;
 
 lazy_static! {
-    static ref KAFKA_BROKER: String = std::env::var("KAFKA_BROKER").unwrap_or("localhost:9191".to_string());
+    static ref KAFKA_BROKER: String = std::env::var("KAFKA_BROKER").unwrap_or("localhost:9092".to_string());
 }
 
 
@@ -47,10 +48,11 @@ impl KafkaClientConfig {
         let consumer_config: StreamConsumer = ClientConfig::new()
             .set("group.id", "consumer-group")
             .set("bootstrap.servers", KAFKA_BROKER.as_str())
-            .set("enable.partition.eof", "false")
+            .set("enable.partition.eof", "true")
+
             .set("session.timeout.ms", "6000")
             .set("enable.auto.commit", "true")
-            .set("auto.offset.reset", "earliest")
+            .set("auto.offset.reset", "latest")
             .set_log_level(RDKafkaLogLevel::Debug)
             .create()
             .expect("Consumer creation failed");
@@ -84,10 +86,12 @@ impl KafkaClientConfig {
     } 
 
     pub async fn send_message(&self, message: &Arc<TaskQueueMessage>) -> Result<()> { 
-        log::info!("Sending a message to worker");
+        log::info!("🎉 Sending a message to worker");
         if let Some(ref producer) = &self.producer_config { 
+            log::info!("📦Payload");
 
-            let futures: Vec<_> = (0..5).map(|_| async move {
+            // let futures: Vec<_> = (0..1).map(|_| async move {
+                
                 let binding = message.clone();
                 let topic  = &binding.as_ref().message_topic.to_string();
                 
@@ -96,35 +100,45 @@ impl KafkaClientConfig {
                     .payload(payload)
                     .key(&topic);
     
-                log::info!("Sending payload to Aggregated Price Message Payload");
+                log::info!("📦 Sending payload to Aggregated Price Message Payload");
                 let _ = producer.send(record, Duration::from_secs(10)).await;
                 
-            }).collect();
-
-            for fut in futures { 
-                log::info!("Future completed. Result: {:?}", fut.await)
-            }
-        }        
+            // }).collect();
+            // for fut in futures { 
+                log::info!("🎉 Future completed. Result");
+            // }
+        }       
+         
 
         Ok(())
     }
 
-    pub async fn consume_messages(&self) -> Result<Option<AggTickerPrices>> { 
-        let mut prices: Option<AggTickerPrices> = None;
+    pub async fn consume_messages(&self) -> Result<()> { 
         if let Some(ref consumer) = &self.consumer_config { 
-            let stream = consumer.recv().await;
+            loop { 
+                match consumer.recv().await {
+                    Ok(payload) => {
+                        let payload = MessagePayload::from(&payload);
+                        let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
 
-            while let Ok(payload) = &stream { 
-                let payload = MessagePayload::from(payload);
-                let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
-
-                log::info!("Send over to be process by workers");
-                let agg_prices = WorkerService::process_worker_task(task_details).await?;
-                let _ = prices.insert(agg_prices);
+                        log::info!("Send over to be process by workers");
+                        let _ = WorkerService::process_worker_task(task_details).await?;
+                    },
+                    Err(_) => log::error!(""),
+                }
             }
+
+            // let mut stream = consumer.recv().await;
+            // while let Ok(payload) = &stream { 
+            //     let payload = MessagePayload::from(payload);
+            //     let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
+
+            //     log::info!("Send over to be process by workers");
+            //     let _ = WorkerService::process_worker_task(task_details).await?;
+            // }
         }
 
-        Ok(prices)
+        Ok(())
     }
     
 }

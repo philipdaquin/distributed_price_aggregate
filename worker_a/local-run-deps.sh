@@ -40,6 +40,6 @@ docker run -d \
   -p 9092:9092 \
   --link zookeeper:zookeeper \
   -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
-    -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092 \
+  -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092 \
   -e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
   wurstmeister/kafka:latest

@@ -16,7 +16,7 @@ use super::message_topics::MessageTopic;
 use super::models::task_queue_message::TaskQueueMessage;
 
 lazy_static! {
-    static ref KAFKA_BROKER: String = std::env::var("KAFKA_BROKER").expect("Can't read Kafka broker address");
+    static ref KAFKA_BROKER: String = std::env::var("KAFKA_BROKER").unwrap_or("localhost:9191".to_string());
 }
 
 
@@ -84,6 +84,7 @@ impl KafkaClientConfig {
     } 
 
     pub async fn send_message(&self, message: &Arc<TaskQueueMessage>) -> Result<()> { 
+        log::info!("Sending a message to worker");
         if let Some(ref producer) = &self.producer_config { 
 
             let futures: Vec<_> = (0..5).map(|_| async move {
@@ -96,7 +97,7 @@ impl KafkaClientConfig {
                     .key(&topic);
     
                 log::info!("Sending payload to Aggregated Price Message Payload");
-                let _ = producer.send(record, Duration::from_secs(0)).await;
+                let _ = producer.send(record, Duration::from_secs(10)).await;
                 
             }).collect();
 

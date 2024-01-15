@@ -1,16 +1,16 @@
 version: '1.0'
 
 services:
-  worker-service:
-    build: .
-    container_name: worker-service
-    ports: 
-      - "4000:4000" 
-    depends_on:
-      kafka_broker: 
-        condition: service_started
-    networks:
-      - worker-service-local 
+  # worker-service:
+  #   build: .
+  #   container_name: worker-service
+  #   ports: 
+  #     - "4000:4000" 
+  #   depends_on:
+  #     kafka_broker: 
+  #       condition: service_started
+  #   networks:docker
+  #     - worker-service-local 
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest

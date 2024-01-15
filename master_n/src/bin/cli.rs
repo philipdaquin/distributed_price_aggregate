@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
+use dotenv::dotenv;
 use master_n::{error::Result, models::{cache_details::CacheDetails, enums::ticker_symbol::TickerSymbols}, 
     config::{
         models::{task_queue_message::TaskQueueMessage, MessageType}, 
         message_topics::MessageTopic, kafka_config::kafka_client_config
-    }, repository::file_repository::FileRepository};
+    }, repository::file_repository::FileRepository, server::WorkerServer};
 /*
     simple --mode=cache --times=10
     simple --mode=read
@@ -33,7 +34,7 @@ pub enum Action {
     },
 }
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> Result<()> {
     let cli = CliArgs::parse();
     // Builder::from_default_env()
@@ -44,6 +45,19 @@ async fn main() -> Result<()> {
 
     match cli.mode { 
         Action::CACHE { times } => {
+
+            dotenv().ok();
+    // env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let port = std::env::var("PORT")
+        .ok()
+        .and_then(|port| port.parse::<u32>().ok())
+        .unwrap_or(4000);
+
+    let _ = WorkerServer::new(port)
+        .run_server()
+        .await?;
+        // .map_err(Into::into);
             // Create a task 
             let cache_details = CacheDetails::new(TickerSymbols::BTCUSDT, times);
             

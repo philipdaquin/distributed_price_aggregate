@@ -53,7 +53,7 @@ impl KafkaClientConfig {
         let consumer_config: StreamConsumer = ClientConfig::new()
             .set("group.id", "consumer-group")
             .set("bootstrap.servers", KAFKA_BROKER.as_str())
-            .set("enable.partition.eof", "false")
+            .set("enable.partition.eof", "true")
             .set("session.timeout.ms", "6000")
             .set("enable.auto.commit", "true")
             .set("auto.offset.reset", "earliest")
@@ -62,7 +62,7 @@ impl KafkaClientConfig {
             .expect("Consumer creation failed");
         
         // Listen to Consumer Topics
-        let _ = consumer_config.subscribe(&[consumer_topic.to_string().as_str()]);
+        let _ = consumer_config.subscribe(&[consumer_topic.to_string().as_str()]).unwrap();
         let consumer_config = Arc::new(consumer_config);
         
         let _ = self.consumer_config.insert(consumer_config);
@@ -102,12 +102,12 @@ impl KafkaClientConfig {
                     .key(&topic);
     
                 log::info!("Sending payload to Aggregated Price Message Payload");
-                let _ = producer.send(record, Duration::from_secs(0)).await;
+                let _ = producer.send(record, Duration::from_secs(10)).await;
                 
             }).collect();
 
             for fut in futures { 
-                log::info!("Future completed. Result: {:?}", fut.await)
+                log::info!("Future completed. Result")
             }
         }        
 

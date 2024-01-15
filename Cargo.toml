@@ -1,6 +1,10 @@
 [workspace]
 members = [
     "worker_a",
+    "worker_b",
+    "worker_c",
+    "worker_d",
+    "worker_e",
     "simple_client",
     "master_n"
 ]

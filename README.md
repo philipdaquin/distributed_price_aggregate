@@ -1,5 +1,8 @@
 # Distributed Price Aggregator Service
 
+
+https://pool-butter-d20.notion.site/SupraOracle-Rust-Client-6cd7b5ffe1f04728bdc341996d1f71e7?pvs=4
+
 ## Simple Client
 Go to file 
 

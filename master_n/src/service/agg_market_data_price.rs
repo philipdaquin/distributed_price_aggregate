@@ -1,6 +1,6 @@
 use tokio::sync::mpsc::UnboundedReceiver;
 
-use crate::models::{price_ticker::PriceTicker, agg_ticker_prices::AggTickerPrices, enums::ticker_symbol::TickerSymbols};
+use crate::{models::{price_ticker::PriceTicker, agg_ticker_prices::AggTickerPrices, enums::ticker_symbol::TickerSymbols}, error::Result};
 
 
 #[derive(Debug)]
@@ -16,7 +16,7 @@ impl AggMarketDataPriceService {
         }
     } 
     #[tracing::instrument(level = "debug")]
-    pub async fn get_agg_ticker_price(&mut self) -> AggTickerPrices { 
+    pub async fn get_agg_ticker_price(&mut self) -> Result<AggTickerPrices> { 
 
         log::info!("Calculating sum");
         let mut queue = Vec::new();
@@ -33,8 +33,10 @@ impl AggMarketDataPriceService {
                 if *prices <= 0.0 { continue }
                 total_sum += prices;
                 node_counted += 1;
+
+                // push the average prices used to calculate the final average
+                queue.push(PriceTicker::new(*symbol, *prices));         
             } 
-            queue.extend(raw_data_points);         
         } 
         log::info!("emd count");
         
@@ -51,6 +53,6 @@ impl AggMarketDataPriceService {
 
         
 
-        return agg_ticker_prices
+        return Ok(agg_ticker_prices)
     }
 }

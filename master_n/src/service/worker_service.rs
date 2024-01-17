@@ -1,13 +1,15 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use tokio::sync::mpsc;
+use tokio::time::sleep;
 
 use crate::config::kafka_config::{KafkaClientConfig, kafka_client_config};
 use crate::config::message_topics::MessageTopic;
 use crate::config::models::MessageType;
 use crate::config::models::agg_price_message::AggPriceMessage;
 use crate::config::models::task_queue_message::TaskQueueMessage;
-use crate::error::Result;
+use crate::error::{Result, ServerError};
 use crate::models::agg_ticker_prices::AggTickerPrices;
 use crate::models::cache_details::CacheDetails;
 use crate::models::price_ticker::PriceTicker;
@@ -37,13 +39,10 @@ impl WorkerService {
 
         Ok(())
     }
-    #[tracing::instrument(level = "debug", err)]
-    pub async fn process_worker_task(task: TaskQueueMessage) -> Result<()> { 
 
+    pub fn validate_message_type(task: TaskQueueMessage) -> Option<AggTickerPrices> { 
         let validator = initialise_valid_signatures();
 
-        let (tx, rx) = mpsc::unbounded_channel::<AggTickerPrices>();
-        let mut tmp: Vec<AggTickerPrices> = Vec::new();
         log::info!("📘 Processing Data Prices");
         if let Some(job) = task.message_type { 
             if let MessageType::AggPriceMessage(agg_message) = job { 
@@ -51,23 +50,46 @@ impl WorkerService {
                 log::info!("🎉 Validating Node Signature");
                 if validator.validate_sig(agg_message.get_id(), agg_message.get_signature()) { 
                     if let Some(data) = agg_message.agg_ticker_prices { 
-                        // let _ = tx.send(data);
-                        tmp.push(data)
+                        return Some(data);
                     }
                 } 
             }
         }
+        return None;
+    }
 
-        // Process all AggTickerPrices inside the Channel
-        log::info!("Calculating final market data");
-        let mut agg_price_ticker = AggMarketDataPriceService::new(tmp);
-        let market_data = agg_price_ticker.get_agg_ticker_price().await; 
-        log::info!("Cache complete. The average USD price of BTC is {}", market_data.avg_price.expect("Unable to calculate AVG price"));
-        
-        // Save locally to database
-        log::info!("Saving locally");
-        let _ = FileRepository::save(&market_data)?;     
+    #[tracing::instrument(level = "debug", err)]
+    pub async fn process_worker_task_with_retries(task: &Vec<AggTickerPrices>) -> Result<()> { 
 
-        Ok(())
+        const MAX_RETRIES: usize = 3;
+        let mut retries =  3;
+
+        let mut agg_price_ticker = AggMarketDataPriceService::new(task.to_vec());
+
+        loop { 
+            match agg_price_ticker.get_agg_ticker_price().await {
+                Ok(_) => {
+                    log::info!("Calculating final market data");
+
+                    let market_data = agg_price_ticker.get_agg_ticker_price().await?; 
+                    log::info!("Cache complete. The average USD price of BTC is {}", market_data.avg_price.expect("Unable to calculate AVG price"));
+                    
+                    // Save locally to database
+                    log::info!("Saving locally");
+                    let _ = FileRepository::save(&market_data)?;  
+                    return Ok(());
+                },
+                Err(e) => { 
+                    log::error!("Error processing messages, retrying ({}): {:?}", retries + 1, e);
+                    retries += 1;
+                    if retries >= MAX_RETRIES { 
+                        return Err(ServerError::HttpClientError);
+                    }
+
+                    sleep(Duration::from_secs(1)).await;
+
+                },
+            }
+        }
     }
 }

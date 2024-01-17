@@ -1,5 +1,6 @@
 use std::sync::{Mutex, Arc};
 use std::time::Duration;
+use futures::channel::mpsc;
 use lazy_static::lazy_static;
 use rdkafka::config::RDKafkaLogLevel;
 use rdkafka::consumer::{Consumer, StreamConsumer};
@@ -114,7 +115,8 @@ impl KafkaClientConfig {
     }
 
     pub async fn consume_messages(&self) -> Result<()> { 
-        
+        // let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<AggTickerPrices>();
+        let mut queue = Vec::new();
         if let Some(ref consumer) = &self.consumer_config { 
             loop { 
                 match consumer.recv().await {
@@ -123,9 +125,28 @@ impl KafkaClientConfig {
                         let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
 
                         log::info!("Send over to be process by workers");
-                        let _ = WorkerService::process_worker_task(task_details).await?;
+
+
+                        // Validate 
+                        if let Some(ticker_price) = WorkerService::validate_message_type(task_details) { 
+                            queue.push(ticker_price);
+                            if queue.len() == 5 { 
+                                // proess the message with retries  
+                                if let Err(e) = WorkerService::process_worker_task_with_retries(&queue).await { 
+                                    eprintln!("");
+                                }
+                            } else { 
+                                queue.clear();
+                            }
+                        } else { 
+                            log::warn!("Ignoring invalid messages from unverified nodes...");
+                            continue;
+                        }
                     },
-                    Err(_) => log::error!(""),
+                    Err(_) => {
+                        log::error!("Error while receiving message...");
+                        continue;
+                    },
                 }
             }
         }

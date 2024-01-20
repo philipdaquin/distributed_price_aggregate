@@ -40,6 +40,7 @@ impl WorkerService {
         Ok(())
     }
 
+    #[tracing::instrument(level = "debug")]
     pub fn validate_message_type(task: TaskQueueMessage) -> Option<AggTickerPrices> { 
         let validator = initialise_valid_signatures();
 
@@ -47,8 +48,9 @@ impl WorkerService {
         if let Some(job) = task.message_type { 
             if let MessageType::AggPriceMessage(agg_message) = job { 
                 // Validate node signatures 
-                log::info!("🎉 Validating Node Signature");
-                if validator.validate_sig(agg_message.get_id(), agg_message.get_signature()) { 
+                let id = agg_message.get_id();
+                log::info!("🎉 Validating Node Signature of worker: {id}");
+                if validator.validate_sig(id.to_string(), agg_message.get_signature()) { 
                     if let Some(data) = agg_message.agg_ticker_prices { 
                         return Some(data);
                     }
@@ -60,22 +62,18 @@ impl WorkerService {
 
     #[tracing::instrument(level = "debug", err)]
     pub async fn process_worker_task_with_retries(task: &Vec<AggTickerPrices>) -> Result<()> { 
-
         const MAX_RETRIES: usize = 3;
         let mut retries =  3;
-
         let mut agg_price_ticker = AggMarketDataPriceService::new(task.to_vec());
-
         loop { 
             match agg_price_ticker.get_agg_ticker_price().await {
                 Ok(_) => {
-                    log::info!("Calculating final market data");
-
+                    log::info!("🧮 Calculating final market data");
                     let market_data = agg_price_ticker.get_agg_ticker_price().await?; 
-                    log::info!("Cache complete. The average USD price of BTC is {}", market_data.avg_price.expect("Unable to calculate AVG price"));
+                    log::info!("✏️ Cache complete. The average USD price of BTC is {}", market_data.avg_price.expect("Unable to calculate AVG price"));
                     
                     // Save locally to database
-                    log::info!("Saving locally");
+                    log::info!("💾 Saving locally");
                     let _ = FileRepository::save(&market_data)?;  
                     return Ok(());
                 },

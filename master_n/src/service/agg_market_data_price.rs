@@ -18,18 +18,18 @@ impl AggMarketDataPriceService {
     #[tracing::instrument(level = "debug")]
     pub async fn get_agg_ticker_price(&mut self) -> Result<AggTickerPrices> { 
 
-        log::info!("Calculating sum");
+        // log::info!("Calculating sum");
         let mut queue = Vec::new();
         let mut total_sum = 0.0;
         let mut node_counted = 0;
         let mut global_symbol = TickerSymbols::default();
-        log::info!("Staritn count");
+        // log::info!("Start count");
 
         for message in &self.receiver { 
             let AggTickerPrices { symbol, raw_data_points, avg_price } = message;
             
             if let Some(prices) = avg_price { 
-                log::info!("{prices}");
+                // log::info!("{prices}");
                 if *prices <= 0.0 { continue }
                 total_sum += prices;
                 node_counted += 1;
@@ -38,21 +38,16 @@ impl AggMarketDataPriceService {
                 queue.push(PriceTicker::new(*symbol, *prices));         
             } 
         } 
-        log::info!("emd count");
-        
+        // log::info!("emd count");
         // The average price of all Average Prices 
         let avg_price = total_sum / node_counted as f64;
         // log::info!("SUM {avg_price}");
-        log::info!("Cache complete. The average USD price of BTC is {avg_price}");
-        
+        // log::info!("Cache complete. The average USD price of BTC is {avg_price}");
         let agg_ticker_prices = AggTickerPrices::new(
             global_symbol,
             queue, 
             avg_price
         );
-
-        
-
         return Ok(agg_ticker_prices)
     }
 }

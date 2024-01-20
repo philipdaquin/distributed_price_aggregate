@@ -89,25 +89,18 @@ impl KafkaClientConfig {
     pub async fn send_message(&self, message: &Arc<TaskQueueMessage>) -> Result<()> { 
         log::info!("🎉 Sending a message to worker");
         if let Some(ref producer) = &self.producer_config { 
-            log::info!("📦Payload");
+            let binding = message.clone();
+            let topic  = &binding.as_ref().message_topic.to_string();
+            
+            let payload = &serde_json::to_string(binding.as_ref()).unwrap();
+            let record = FutureRecord::to(&topic)
+                .payload(payload)
+                .key(&topic);
 
-            // let futures: Vec<_> = (0..1).map(|_| async move {
-                
-                let binding = message.clone();
-                let topic  = &binding.as_ref().message_topic.to_string();
-                
-                let payload = &serde_json::to_string(binding.as_ref()).unwrap();
-                let record = FutureRecord::to(&topic)
-                    .payload(payload)
-                    .key(&topic);
-    
-                log::info!("📦 Sending payload to Aggregated Price Message Payload");
-                let _ = producer.send(record, Duration::from_secs(10)).await;
-                
-            // }).collect();
-            // for fut in futures { 
-                log::info!("🎉 Future completed. Result");
-            // }
+            log::info!("📦 Sending payload to Aggregated Price Message Payload");
+            let _ = producer.send(record, Duration::from_secs(10)).await;
+            
+            log::info!("🎉 Future completed. Result");
         }       
          
 
@@ -115,37 +108,51 @@ impl KafkaClientConfig {
     }
 
     pub async fn consume_messages(&self) -> Result<()> { 
-        // let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<AggTickerPrices>();
+        // let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<AggTickerPrices>();
         let mut queue = Vec::new();
         if let Some(ref consumer) = &self.consumer_config { 
             loop { 
                 match consumer.recv().await {
+                    //
+                    //  Collect all `AggTickerPrices` in a single in-memory queue, then
+                    //  values have been collected, run the process of aggregating into a single value
+                    //
                     Ok(payload) => {
                         let payload = MessagePayload::from(&payload);
                         let task_details: TaskQueueMessage = serde_json::from_str(payload.as_str())?;
-
-                        log::info!("Send over to be process by workers");
-
-
+                        log::info!("👷 Send over to be process by workers");
                         // Validate 
                         if let Some(ticker_price) = WorkerService::validate_message_type(task_details) { 
                             queue.push(ticker_price);
-                            if queue.len() == 5 { 
-                                // proess the message with retries  
-                                if let Err(e) = WorkerService::process_worker_task_with_retries(&queue).await { 
-                                    eprintln!("");
-                                }
-                            } else { 
-                                queue.clear();
-                            }
                         } else { 
                             log::warn!("Ignoring invalid messages from unverified nodes...");
                             continue;
                         }
                     },
                     Err(_) => {
-                        log::error!("Error while receiving message...");
-                        continue;
+                        log::info!("Length of QUEUE: {}", queue.len());
+
+                        if !queue.is_empty() {
+                            if queue.len() == 5 { 
+                                // proess the message with retries  
+                                if let Err(e) = WorkerService::process_worker_task_with_retries(&queue).await { 
+                                    eprintln!("Server Error: {e}");
+                                }
+                            } else if queue.len() > 0 { 
+                                log::warn!("Unable to retrieve all values from all nodes...");
+                                log::warn!("Calculating the average anyway with {} nodes", queue.len());
+                                // proess the message with retries  
+                                if let Err(e) = WorkerService::process_worker_task_with_retries(&queue).await { 
+                                    eprintln!("Server Error: {e}");
+                                }
+                            } else { 
+                                queue.clear();
+                            }
+                        } else { 
+                            log::warn!("Waiting for new tasks...");
+                            continue;
+                        }
+
                     },
                 }
             }

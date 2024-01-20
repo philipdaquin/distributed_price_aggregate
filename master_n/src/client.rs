@@ -42,7 +42,7 @@ impl Client {
 
     pub fn read_local_cache() -> Result<()> { 
         match FileRepository::load_from_file() {
-            Ok(file) => println!("Reading Cache Value: {file:?}"),
+            Ok(file) => println!("Reading Cache Value: {file:#?}"),
             Err(e) => eprintln!("Error Loading from file: {e:?}"),
         }
 

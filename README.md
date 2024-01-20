@@ -4,8 +4,11 @@
 Demo
 https://www.youtube.com/watch?v=JLVSVWbQTUE&t=25s
 
-
+Notes
 https://pool-butter-d20.notion.site/SupraOracle-Rust-Client-6cd7b5ffe1f04728bdc341996d1f71e7?pvs=4
+
+The Master Node dispatches tasks via a shared Messaging Queue. Workers subscribe to the queue, process BTC price data from Binance's WebSocket API, and return average prices. The Master Node aggregates these averages to compute the final average price of the BTC price.
+
 
 ## Simple Client
 Go to file 

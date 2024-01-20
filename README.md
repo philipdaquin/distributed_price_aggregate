@@ -1,6 +1,10 @@
 # Distributed Price Aggregator Service
 
 
+Demo
+https://www.youtube.com/watch?v=JLVSVWbQTUE&t=25s
+
+
 https://pool-butter-d20.notion.site/SupraOracle-Rust-Client-6cd7b5ffe1f04728bdc341996d1f71e7?pvs=4
 
 ## Simple Client

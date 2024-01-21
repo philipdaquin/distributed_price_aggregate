@@ -17,7 +17,6 @@ impl NodeSignatureValidator {
         self.sig_map.insert(node_id.to_string(), sig.to_string());
     }
 
-    #[tracing::instrument(level = "info")]
     pub fn validate_sig(&self, node_id: String, sig: String) -> bool { 
         match self.sig_map.get(&node_id) {
             Some(stored_signature) => {

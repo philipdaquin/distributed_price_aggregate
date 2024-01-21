@@ -1,0 +1,100 @@
+version: '1.0'
+
+services:
+  master_node:
+    build: ./master_n
+    container_name: master_node
+    ports: 
+      - "4000:4000" 
+    depends_on:
+      kafka_broker: 
+        condition: service_started
+    networks:
+      - worker-service-local 
+  worker_a:
+    build: ./worker_a
+    container_name: master_node
+    ports: 
+      - "4001:4001" 
+    depends_on:
+      kafka_broker: 
+        condition: service_started
+    networks:
+      - worker-service-local 
+  worker_b:
+    build: ./worker_b
+    container_name: worker_b
+    ports: 
+      - "4002:4002" 
+    depends_on:
+      kafka_broker: 
+        condition: service_started
+    networks:
+      - worker-service-local 
+  worker_c:
+    build: ./worker_c
+    container_name: worker_c
+    ports: 
+      - "4003:4003" 
+    depends_on:
+      kafka_broker: 
+        condition: service_started
+    networks:
+      - worker-service-local 
+  worker_d:
+    build: ./worker_d
+    container_name: worker_d
+    ports: 
+      - "4004:4004" 
+    depends_on:
+      kafka_broker: 
+        condition: service_started
+    networks:
+      - worker-service-local 
+  worker_e:
+    build: ./worker_e
+    container_name: worker_e
+    ports: 
+      - "4005:4005" 
+    depends_on:
+      kafka_broker: 
+        condition: service_started
+    networks:
+      - worker-service-local 
+
+
+  #
+  #
+  #
+  #
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181/tcp"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - worker-service-local
+
+  kafka_broker:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka_broker
+    ports:
+      - "9191:9191/tcp"
+    depends_on:
+      zookeeper:
+        condition: service_started
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker:9191
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - worker-service-local
+
+
+networks:
+  worker-service-local:
+    external: false 

@@ -1,1 +1,0 @@
-cd worker_b && cargo run --bin worker_b

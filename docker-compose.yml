@@ -1,16 +1,6 @@
 version: '1.0'
 
 services:
-  master_node:
-    build: ./master_n
-    container_name: master_node
-    ports: 
-      - "4000:4000" 
-    depends_on:
-      kafka_broker: 
-        condition: service_started
-    networks:
-      - worker-service-local 
   worker_a:
     build: ./worker_a
     container_name: master_node
